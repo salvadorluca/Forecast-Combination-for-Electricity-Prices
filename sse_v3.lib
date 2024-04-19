@@ -1,0 +1,603 @@
+# aggiornamento 24 novembre 2003
+
+# source("c:/discod/didattica/dispense-software/librerie/sse.lib")
+monthplot=function(x, type = "l", labels, xlab = "", ylab = "", ...)
+{
+	if(length(dim(x)))
+		stop("This implementation is only for univariate time series"
+			)
+	old.opts = options(warn = -1)	
+
+	on.exit(options(old.opts))
+	if(!(type == "l" || type == "h"))
+		stop(paste("type is \"", type, 
+			"\", it must be \"l\" or \"h\"", sep = ""))
+        if(ylab=="") ylab=deparse(substitute(x))
+        
+	x = as.ts(x)
+
+	f = frequency(x)
+	cx = cycle(x)
+	m = tapply(x, cx, mean)
+	if(cx[1] != 1 || cx[length(x)] != f) {
+		x = ts(c(rep(NA, cx[1] - 1), x, rep(NA, f - cx[
+			length(x)])), start = start(x, format = T)[1], 
+			end = c(end(x, format = T)[1], f), frequency
+			 = f)
+		cx = cycle(x)
+	}
+	i = order(cx)
+	n = length(x)
+	if(missing(labels))
+		labels = if(f == 12) c("Jan", "Feb", "Mar", "Apr", 
+				"May", "Jun", "Jul", "Aug", "Sep", 
+				"Oct", "Nov", "Dec") else if(f == 4)
+			c("First", "Second", "Third", "Fourth")
+		else 1:f
+	if(length(labels) != f)
+		stop(paste("There must be", f, "labels"))
+	p = n/f
+	hx = seq(1, n, by = p) + (0:(f - 1))
+	hy = rep(m, rep(2, length(m)))
+	X = as.vector(outer(0:(p - 1), hx, "+"))
+                
+
+	plot(c(1, n + f), range(x[!is.na(x)]), type = "n", axes = F, 
+		xlab = xlab, ylab = ylab, ...)
+	dotdot = list(...)
+	ddttl = match(c("main", "sub", "axes", "ylim"), names(dotdot),
+		nomatch = 0)
+	ddttl = ddttl[ddttl != 0]
+	add.axes = T
+	if(length(ddttl)) {
+		if(any(names(dotdot) == "axes"))
+			add.axes = dotdot$axes
+		dotdot = dotdot[ - ddttl]
+	}
+	if(type == "l")
+		for(j in 1:f)
+			do.call("lines", c(list(hx[j]:(hx[j] + p - 1), 
+				x[i][((j - 1) * p + 1):(j * p)]), 
+				dotdot))
+	else if(type == "h")
+		do.call("segments", c(list(X, x[i], X, m[cx][i]), 
+			dotdot))
+	do.call("segments", c(list(hx, m, hx + p, m), dotdot))
+	if(add.axes) {
+		box()
+		axis(2)
+		axis(1, at = hx + p/2, labels = labels)
+	}
+
+	invisible()
+}
+
+#arma.sim.old = function(n, ar = NULL, ma = NULL, sigma = 1.0)
+#{
+#    x = ts(rnorm(n+100, 0, sigma^2), start = -99)
+#    if(length(ma)) x = filter(x, ma, sides=1)
+#    if(length(ar)) x = filter(x, ar, method="recursive")
+#    as.ts(x[-(1:100)])
+#}
+
+# La funzione precedente (suggerita nella pagina di help di R per la
+# funzione filter) non genera correttamente processi con componenti a
+# media mobile. La seguente funzione invece si comporta bene.
+
+arma.sim = function(n, ar = NULL, ma = NULL, sigma = 1.0)
+{  
+    x = ts(rnorm(n+100, 0, sigma), start = -99)
+    if(length(ma)) x = filter(x, c(1,ma), sides=1)
+    if(length(ar)) x = filter(x, ar, method="recursive")
+    as.ts(x[-(1:100)])
+}
+
+arima.diag=function(object,gof.lag=10, max.lag=NULL) 
+{
+    data = eval(parse(text = object$series))
+    residuals=object$resid
+    n.par=length(object$coef)
+    n = length(residuals)
+
+    if ( is.null(max.lag) )
+          max.lag = max(gof.lag + n.par + 1, 10 * log10(n))
+
+    cor = acf(residuals, lag.max = max.lag,plot=FALSE)    
+    
+    p.value=NULL
+    for (lag in 1:gof.lag) {
+    obs = cor$acf[2:(lag + 1)]
+    STATISTIC = n * (n + 2) * sum(1/seq(n - 1, n - lag) * obs^2)
+        p.value =c(p.value, 1 - pchisq(STATISTIC, lag))
+    }
+
+    par(mfrow=c(3,1))
+    plot(residuals)
+    plot.acf(cor)
+    plot(1:gof.lag,p.value,xlab="lag",ylab="pvalue")
+    abline(h=0.05,lty=2,col="red")
+    par(mfrow=c(1,1))
+    
+}
+
+# rgams
+#
+# genera valori da funzione gamma segnata, con funzione di densita'
+#
+# f(x) = \frac12 \frac{\lambda^r}{\Gamma(r)} |x|^{r-1} \exp\{-\lambda |x|\} ,
+#
+# dove lambda e' il parametro di scala (scale) e r e' il parametro di
+# forma (shape). I valori vengono ottenuti generando prima n valori da
+# una gamma e poi cambiandoli di segno con probabilita' 1/2.
+# Il numero di valori generati e' n.
+
+rgams=function(n,shape,scale=1)
+{
+  return(rgamma(200,shape,1/scale)*(1-2*(runif(200)>0.5)))
+}
+  
+# TACF - di Alfredo Barbieri e Alessio Boaretto
+
+valpsi= function (r,p,q,phi,theta) {
+	psiparzj[1]<=1
+		arretrapsiparzj=function (p) {
+			for (i in 0:(p-1)) psiparzj[[i+1]]<=psiparzj[[i+2]]
+			}
+		if (r==0) psi=1
+		else {
+			if (r>q) psi=0
+			else psi=theta[r]
+			if (r>p) {
+				if (p>0) arretrapsiparzj(p)
+				if (p>0) for (l in 1:p) psi=psi-phi[l]*psiparzj[[p-l+1]]
+				r=p
+				}
+			else {
+				for (l in 0:(r-1)) psi=psi-phi[r-l]*psiparzj[[l+1]]
+				}
+			}
+		psiparzj[r+1]<=psi
+		return (psi)
+		}
+
+durbinlevinson=function (gamma,lag.max) {
+	phikk=array(0,lag.max)
+	phidl=array(0,lag.max)
+	phidl1=array(0,lag.max)
+	v=array(0,lag.max)
+	sommatoria=0
+	v[1]=gamma[1]
+	phidl[1]=gamma[2]/gamma[1]
+	phikk[1]=phidl[1]
+	v[2]=v[1]*(1-phidl[1]^2)
+	if (lag.max>1) for (i in 2:lag.max) {
+		for (j in 1:i-1) phidl1[j]=phidl[j]
+		sommatoria=0
+		for (j in 1:i) sommatoria=sommatoria+phidl1[j]*gamma[abs(i-j+1)]
+		phidl[i]=(gamma[i+1]-sommatoria)/v[i]
+		phikk[i]=phidl[i]
+		for (j in 1:i-1) phidl[j]=phidl1[j]-phidl[i]*phidl1[i-j]
+		v[i+1]=v[i]*(1-phidl[i]^2)
+		}
+	return (phikk)
+	}
+
+tacf=function (p=0,q=0,phi=0,theta=0,lag.max=20,graphics=0,wn.var=1) {
+	if(p>0) {
+	repeat {
+		if ((phi[p]!="NA") && (phi[p]!=0)) break
+		p=p-1
+		}
+	}
+	if(q>0) {
+	repeat {
+		if ((theta[q]!="NA") && (theta[q]!=0)) break
+		q=q-1
+		}
+	}
+	if (p>0) {
+		if (sum(Mod(polyroot(c(1,-phi[1:p])))>1)<p) {
+			x="Non-causal AR polynomial"
+			return (x)
+			}
+		}
+	psiparzj<=array(0,p+1)
+	phikk=array(0,lag.max)
+	gamma=array(0,lag.max+1)
+	facr=array(0,lag.max+1)
+	m=max(p,q)
+	psi=array(0,q+1)
+	for (i in 0:q) {
+		dump=valpsi(i,p,q,-phi,theta)
+		psi[i+1]=dump
+		}
+	if (p>0) for (i in p:1) phi[i+1]=-phi[i]
+	if (q>0) for (i in q:1) theta[i+1]=theta[i]
+	phi[1]=1
+	theta[1]=1
+	b=array(0,m+1)
+	A=array(0,dim=c(m+1,m+1))
+	for (k in 0:m) {
+		somma=0
+		if (k<=q) for (j in k:q) somma=somma+theta[j+1]*psi[j-k+1]
+		b[k+1]=somma
+		}
+	for (i in 1:(m+1)) {
+		for (j in 1:(m+1)) {
+			somma=0
+			if (j==1) {
+				if (i<=(p+1)) somma=phi[i]
+				}
+			else {
+				if ((i+j-2)<=p) somma=phi[i+j-1]
+				if ((i-j)<=p && (i-j)>=0) somma=somma+phi[i-j+1]
+				}
+			A[i,j]=somma
+			}
+		}
+	primigamma=solve(A,b)
+	for (i in 1:(m+1)) gamma[i]=primigamma[i]
+	if (p>0) for (i in 1:p) phi[i]=-phi[i+1]
+	if (q>0) for (i in 1:q) theta[i]=theta[i+1]
+	if ((m+1)<lag.max) for (k in (m+1):lag.max) {
+		dump=0
+		if (p>0) for (j in 1:p) dump=dump+phi[j]*gamma[k-j+1]
+		gamma[k+1]=dump
+		}
+	k=1
+	repeat {
+		facr[k]=gamma[k+1]/gamma[1]
+		k=k+1
+		if (k>lag.max) break
+		}
+	phikk=durbinlevinson (gamma,lag.max)
+	acf=formatC(facr[1:lag.max],digits=7,format="f")
+	pacf=formatC(phikk[1:lag.max],digits=7,format="f")
+	acvf=formatC(gamma[2:(lag.max+1)]*wn.var,digits=7,format="f")
+	var=formatC(gamma[1]*wn.var,digits=7,format="f")
+	if (graphics==1) {
+     #       par(mfrow=c(2,1), mai=c(0.5,0.5,0.5,0.5))
+                plot(acf,type="h", ylab="acf")
+		abline (h=0)
+		plot(pacf,type="h", ylab="pacf")
+		abline (h=0)
+		}
+	else return (acf,pacf,var,acvf)
+	}
+
+# filterp e' una versione semplificata di filter che serve ad applicare
+# filtri periodici. La funzione e' lenta perche', a differenza di filter,
+# usa cicli for e non fa riferimento a codice C esterno. La funzione
+# filterp e' diversa da filter anche per il modo con cui tratta i
+# valori iniziali.
+
+filterp=function(e, filt, period, method = "convolution")
+{
+  n=length(e)
+  lf<=length(filt)
+  x=rep(-1,n) # inizializzazione del vettore che conterra' la serie filtrata
+  x[1:(lf*period)]=e[1:(lf*period)] # valori iniziali
+  if (method == "recursive"){
+    for (i in (lf*period+1):n){
+      x[i]=e[i]
+      for (j in 1:lf)
+        x[i]=x[i]+filt[j]*x[i-j*period]
+    }
+  }
+  else{
+    for (i in (lf*period+1):n){
+      x[i]=e[i]
+      for (j in 1:lf)
+        x[i]=x[i]+filt[j]*e[i-j*period]
+    }
+  }
+  return(x)
+}
+
+
+arma.sim.p = function(n, ar=NULL, ma=NULL, sar = NULL, sam = NULL, period = 12, sigma = 1.0)
+{
+    if (length(ar) || length(ma))
+      x = arma.sim(n+100,ar,ma,sigma)
+    else
+      x = ts(rnorm(n+100, 0, sigma), start = -99)
+    if(length(sam)) x = filterp(x, sam, period)
+    if(length(sar)) x = filterp(x, sar, period, method="recursive")
+    as.ts(x[-(1:100)])
+}
+
+aic.comp = function(x=NULL,max.p=NULL,max.q=NULL,d=NULL)
+{
+  mat.aic=NULL # inizializziamo la matrice che conterra' i risultati
+
+  for (p in 0:max.p){
+    for(q in 0:max.q){
+      if (p>0 | q>0){
+        fit=arima0(x,order=c(p,d,q))
+        mat.aic=rbind(mat.aic,c(fit$aic,p,d,q))
+      }
+    }
+  }
+  return(mat.aic)
+}
+
+
+
+# pierce.test
+#
+# effettua il test di pierce sulla stagionalità dei residui
+
+pierce.test=function(x=NULL, m=NULL, s=NULL, para=NULL)
+{
+kk=acf(x,m*s, plot=FALSE)
+n=length(x)
+statistics=0
+for (i in 1:m)
+{
+statistics=statistics+(1/(n-(i*s)))*kk$acf[(i*s)+1]^2
+}
+statistics=statistics*n*(n+2)
+p.value=1-pchisq(statistics, m-para)
+return(statistics, p.value)
+}
+
+
+automatic=function(x=NULL,pmax=NULL,qmax=NULL,c=sqrt(2))
+{
+n=length(x)
+pmax=3
+qmax=3
+aic2=matrix(1,pmax+1,qmax+1)
+aic=matrix(1,pmax+1,qmax+1)
+scc=matrix(1,pmax+1,qmax+1)
+hqc=matrix(1,pmax+1,qmax+1)
+for (i in 0:pmax)
+{
+for (j in 0:qmax)
+{
+ x.modello=arima(x,order=c(i,0,j),include.mean=T)
+ verosim=x.modello$loglik
+ varianza=x.modello$sigma2
+ aic2[i+1,j+1]=(-2*verosim)+2*(i+j)
+ aic[i+1,j+1]=log(varianza)+(2*(i+j))/n
+ scc[i+1,j+1]=log(varianza)+(i+j)*(log(n)/n)
+ hqc[i+1,j+1]=log(varianza)+(i+j)*c*log(log(n))/n
+# fpe[i+1,j+1]=(N+i)/(N-i)
+}
+}
+return(aic,aic2,scc,hqc)
+}
+
+Ljung.Box= function (x, lag = 15, param=1)
+{
+    if (NCOL(x) > 1)
+        stop ("x is not a vector or univariate time series")
+    DNAME = deparse(substitute(x))
+    cor = acf (x, lag.max = lag, plot = FALSE)
+    n = length(x)
+    PARAMETER = lag-param
+    obs = cor$acf[2:(lag+1)]
+        STATISTIC = n*(n+2)*sum((1/seq(n-1,n-lag))*obs^2)
+        PVAL = 1-pchisq(STATISTIC,lag-param)
+       return(list(statistic=STATISTIC,
+                   gdl = PARAMETER,
+                   pvalue = PVAL))
+}
+
+asimm=function(x)
+{
+n=length(x)
+m3=sum((x-mean(x))^3)/n
+sigma3=(sd(x))^3
+return(m3/sigma3)
+}
+
+curtosi=function(x=NULL)
+{
+n=length(x)
+m4=sum((x-mean(x))^4)/n
+sigma4=(sd(x))^4
+return(m4/sigma4)
+}
+
+
+stat.mod=function(fit.y,maxlag=15,ordini=0)
+{
+Coef=fit.y$coef
+Std.Err=sqrt(diag(fit.y$var.coef))
+tstat=fit.y$coef/sqrt(diag(fit.y$var.coef))
+pval=2*pnorm(abs(tstat),lower.tail=F)
+tabella=data.frame(Coef,Std.Err,tstat,pval)
+sigma2=fit.y$sigma2
+names(sigma2)="sigma2"
+AIC=fit.y$aic
+names(AIC)="AIC"
+loglik=fit.y$loglik
+names(loglik)="loglik"
+cc1=Ljung.Box(fit.y$resid,maxlag,ordini)
+riga0="-------------- Stime dei parametri -----------"
+names(riga0)=" "
+riga="-----------------------------------------------"
+names(riga)=" "
+print(riga0, quote=F)
+print(tabella)
+print(riga, quote=F)
+riga2="-------------Test di Ljung-Box ---------------"
+names(riga2)=" "
+print(c(sigma2,AIC,loglik))
+print(riga2, quote=F)
+print(t(cc1))
+}
+
+
+prevedi=function(fit.x,k=10,sig=0.95)
+{
+pre=predict(fit.x,k)
+p=pre$pred[1:k]
+se=pre$pred[1:k]
+limsup=p+qnorm(0.5-sig/2)*se
+liminf=p-qnorm(0.5-sig/2)*se
+prev=list(p,liminf,limsup,se)
+names(prev)=c("p","inf","sup","se")
+return(prev)
+}
+
+cfs=function(x,maxlag=24,new=F)
+{
+if (new==T)
+{
+x11(width=8,height=8)
+par(mfrow=c(2,1),mai=c(0.8,0.8,0.8,0.8))
+#par(bg="cornsilk")
+}
+acf(x,maxlag, na.action=na.pass)
+pacf(x,maxlag, na.action=na.pass)
+}
+
+plotta=function(x)
+{
+plot(x,type="l")
+}
+
+
+
+rw.sim=function(n=300, drift=0, eps.sd=1, plot=t)
+{
+y=rep(0,n+50)
+eps=rnorm(n+50,mean=0,sd=eps.sd)
+y[1]=rnorm(1)
+for (i in 2:(n+50)) y[i]=drift+y[i-1]+eps[i]
+if (plot==T) plot(y[51:n+50], type="l")
+return(y[51:n+50])
+}
+
+intconf.coef=function(mod, alpha=0.95)
+{
+m=length(mod$coef)
+mat=matrix(0,nrow=m,ncol=3)
+nomi=c("estimate", "lim.inf", "lim.sup")
+dimnames(mat)=list(NULL,nomi)
+mat[,1]=mod$coef
+mat[,2]=mod$coef+qnorm((1-alpha)/2)*sqrt(diag(mod$var.coef))
+mat[,3]=mod$coef-qnorm((1-alpha)/2)*sqrt(diag(mod$var.coef))
+return(mat)
+}
+
+Ljung.Box.2=function(x, maxlag=20, par=0, all=TRUE)
+{
+if (all==TRUE) {
+ LB=matrix(0,nrow=maxlag, ncol=3)
+ dimnames(LB)=list(NULL, c("statistic", "gdl","pvalue"))
+ for (i in (par+1): maxlag) {
+   lbi=Ljung.Box(x, lag=i, par=par)
+   LB[i,]=c(round(lbi$statistic,2), lbi$gdl, lbi$pvalue)
+   }
+ plot(LB[,3], type="h", lwd=4, ylim=c(0,1), main="Ljung-Box test", ylab="p-value", xlab="k")
+ abline(h=0.05, lty=2, col="red")
+ abline(h=0)
+}
+if (all==FALSE) LB=Ljung.Box(x, lag=maxlag, par=par)
+
+return(LB)
+}
+
+make.dummy=function(n, freq=12, start=1)
+{
+dv=matrix(0,nrow=(n+start-1), ncol=freq)
+for (i in 1:freq)
+dv[,i][seq(i,n+start-1,freq)]=1
+return(dv[start:(n+start-1),])
+}
+
+
+# NB=per medie mobili centrate l'ordine deve essere dispari
+wma=function(y, order=5, wts=c(1/8,1/4,1/4,1/4,1/8), centre=TRUE, plot=TRUE)
+{
+if (centre==TRUE)
+{
+n=length(y)
+sy=rep(NA,n)
+ord=(order-1)/2
+for (i in (ord+1):(n-ord)) sy[i]=sum(wts*y[(i-ord):(i+ord)]) 
+if (plot==TRUE)
+{ 
+plot(y,type="l")
+lines(sy, col="red")
+}
+return(ts(sy))
+}
+if (centre==FALSE)
+{
+n=length(y)
+sy=rep(NA,n)
+for (i in (ord):(n)) sy[i]=sum(wts*y[(i-ord+1):(i)]) 
+if (plot==TRUE)
+{ 
+plot(y,type="l")
+lines(sy, col="red")
+}
+return(ts(sy))
+}
+}
+
+
+
+wma2=function(y, m1=2, m2=2, wts=c(1/8,1/4,1/4,1/4,1/8), last=FALSE, plot=TRUE)
+{
+if (length(wts)!=m1+m2+1) print("Dimensione dei pesi errata")
+if (last==FALSE)
+{
+n=length(y)
+sy=rep(NA,n)
+for (i in (m1+1):(n-m2)) sy[i]=sum(wts*y[(i-m1):(i+m2)]) 
+if (plot==TRUE)
+{ 
+plot(y,type="l")
+lines(sy, col="red")
+}
+return(ts(sy))
+}
+if (last==TRUE)
+{
+n=length(y)
+sy=rep(NA,n)
+ord=m1+1+m2
+for (i in (ord):(n)) sy[i]=sum(wts*y[(i-ord+1):(i)]) 
+if (plot==TRUE)
+{ 
+plot(y,type="l")
+lines(sy, col="red")
+}
+return(ts(sy))
+}
+}
+
+prevedi.arima=function(mod, passi, var.orig, i.ord=0)
+{
+if(i.ord==0) 
+{
+  pp=predict(mod, n.ahead=passi)
+  pre=new.env()
+  pre$pred=pp$pred
+  pre$sup=(pp$pred+1.96*pp$se)
+  pre$inf=(pp$pred-1.96*pp$se)
+  prev=as.list(pre)
+  return(prev)
+}
+
+if(i.ord==1) 
+{
+  nn=length(var.orig)
+  k=sum(mod$arma[1:4])+1   # somma degli ordini ar ed ma +1;
+                           # individua la posizione della costante
+  a=mod$coef[k]
+  pp=predict(mod, n.ahead=passi)
+  pre=new.env()
+  pre$pred=var.orig[nn]+pp$pred+a*seq(1,passi,1)
+  pre$sup=var.orig[nn]+(pp$pred+1.96*pp$se)+a*seq(1,passi,1)
+  pre$inf=var.orig[nn]+(pp$pred-1.96*pp$se)+a*seq(1,passi,1)
+  prev=as.list(pre)
+  return(prev)
+}
+}
+
