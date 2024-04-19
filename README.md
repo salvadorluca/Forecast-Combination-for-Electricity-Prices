@@ -5,6 +5,24 @@ This repository contains the R scripts and datasets used in my Bachelor's thesis
 ## Abstract
 This Bachelor's thesis delves into the utility of forecast combinations to enhance the accuracy of electricity price predictions in the Italian market. A variety of forecasting models are employed and assessed for their individual and combined effectiveness. The study prominently features time series forecasting models such as ARIMA, Exponential Smoothing, Random Forest, and Spline models. These models are individually evaluated for their predictive performance and then combined using various weighting methods. The objective is to leverage the strengths of multiple forecasts through model averaging, a technique that helps offset the weaknesses inherent in individual models by blending their forecasts. This approach aims to produce more reliable and accurate predictions for electricity prices, facilitating better decision-making in energy market operations.
 
+Got it! Here’s a restructured explanation for your repository that correctly reflects the contents and the role of each file and folder:
+
+---
+
+## Repository Structure
+
+- **/Additional files/**:
+  - Contains all auxiliary files necessary for running the main script.
+  
+- **Thesis.R**:
+  - This R script includes all the data analysis, model implementation, and forecasting combinations used in the thesis. It is the primary script for replicating the study's results.
+
+- **Thesis.pdf**:
+  - A PDF version of the complete Bachelor’s thesis, which discusses the methodologies, findings, and implications of the research.
+
+- **dati_pun.xlsx**:
+  - The Excel spreadsheet containing the dataset of electricity prices used in the thesis.
+
 ## Setup and Running
 
 ### Prerequisites
