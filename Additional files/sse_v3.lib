@@ -325,7 +325,7 @@ aic.comp = function(x=NULL,max.p=NULL,max.q=NULL,d=NULL)
 
 # pierce.test
 #
-# effettua il test di pierce sulla stagionalit‡ dei residui
+# effettua il test di pierce sulla stagionalit√† dei residui
 
 pierce.test=function(x=NULL, m=NULL, s=NULL, para=NULL)
 {
