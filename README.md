@@ -38,4 +38,4 @@ Ensure you have R installed on your machine. Additionally, the following R libra
 
 ### Next Steps
 - **Code Review and Optimization**: Review and refactor the code for efficiency and readability.
-- **Libraries**: Check whether all libraries are useful
+- **Libraries**: Check whether all libraries are useful and create a file that installs them if you don't have them and loads them if you have them.
